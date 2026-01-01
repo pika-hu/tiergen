@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TierGen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        .ghost-class { opacity: 0.2; background: #2d3748 !important; }
+        .tier-ghost { opacity: 0.5; border: 2px dashed #4a5568; }
+        .settings-menu { display: none; width: 220px; }
+        .settings-menu.active { display: block; }
+
+        .tier-label-input { 
+            background: transparent; 
+            border: 1px solid rgba(255,255,255,0.2); 
+            color: black; 
+            font-weight: 900; 
+            text-align: center; 
+            width: 100%; 
+            outline: none; 
+        }
+
+        .edit-input { 
+            background: rgba(0,0,0,0.5); 
+            border: 1px solid #3b82f6; 
+            color: white; 
+            width: 100%; 
+            text-align: center; 
+            outline: none; 
+            border-radius: 4px; 
+        }
+
+        .color-swatch { width: 24px; height: 24px; cursor: pointer; border-radius: 4px; border: 2px solid transparent; }
+        .color-swatch.selected { border-color: white; }
+        .item img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+        
+        .item-label { 
+            position: absolute; 
+            bottom: 0; 
+            width: 100%; 
+            background: rgba(0,0,0,0.7); 
+            font-size: 10px; 
+            padding: 4px 2px; 
+            line-height: 1.2; 
+            pointer-events: none;
+            display: -webkit-box;
+            -webkit-line-clamp: 2; 
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+        }
+        
+        #export-padding-wrapper { padding: 20px 20px; background-color: #0f0f0f; }
+
+        /* RESTORED: Context Menu Styles */
+        #custom-context-menu { 
+            position: fixed; 
+            display: none; 
+            background: #222; 
+            border: 1px solid #444; 
+            border-radius: 4px; 
+            z-index: 2000; 
+            width: 150px; 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); 
+        }
+    </style>
+</head>
+<body class="bg-[#0f0f0f] text-white p-4 md:p-10 select-none">
+
+    <div id="custom-context-menu" class="overflow-hidden">
+        <button id="delete-item-btn" class="w-full text-left px-4 py-2 text-xs text-red-400 hover:bg-red-900/30 flex items-center gap-2">
+            <i data-lucide="trash-2" class="w-3 h-3"></i> Delete Item
+        </button>
+    </div>
+
+    <div class="max-w-5xl mx-auto">
+        <header class="flex flex-col lg:flex-row justify-between items-center mb-8 gap-4 bg-[#1a1a1a] p-5 rounded-lg border border-gray-800 shadow-xl no-export">
+            <div class="flex items-center gap-4">
+                <h1 class="text-2xl font-black tracking-tighter italic">TIER<span class="text-blue-500 text-3xl">GEN</span></h1>
+                <div class="flex gap-2">
+                    <button onclick="toggleTextView()" class="bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase border border-gray-700 transition flex items-center gap-2">
+                        <i data-lucide="file-text" class="w-3 h-3"></i> Text View
+                    </button>
+                    <button onclick="exportTierList()" class="bg-green-600 hover:bg-green-500 px-3 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition flex items-center gap-2">
+                        <i data-lucide="download" class="w-3 h-3"></i> Save Image
+                    </button>
+                    <button onclick="resetBoard()" class="bg-red-900/40 hover:bg-red-800 px-3 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase border border-red-800 transition flex items-center gap-2">
+                        <i data-lucide="rotate-ccw" class="w-3 h-3"></i> Reset All
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex flex-col gap-1 border-l border-gray-700 pl-4">
+                <span class="text-[10px] uppercase text-gray-500 font-bold tracking-widest">Create Tiers</span>
+                <div class="flex gap-2 items-center">
+                    <input type="text" id="new-tier-name" placeholder="Tier Name..." class="bg-black px-3 py-1 rounded text-xs outline-none border border-gray-700 w-64 focus:border-blue-500 transition h-8">
+                    <div id="creation-color-grid" class="grid grid-cols-8 gap-1 p-1 bg-black/30 rounded border border-gray-700"></div>
+                    <button onclick="addCustomTier()" class="bg-blue-600 hover:bg-blue-700 px-4 py-1 h-8 rounded text-xs font-bold transition">ADD</button>
+                </div>
+            </div>
+        </header>
+
+        <div id="capture-container">
+            <div id="export-padding-wrapper">
+                <div id="master-tier-list" class="space-y-3"></div>
+                <div id="text-output-panel" class="mt-10 p-6 bg-zinc-900 border border-gray-800 rounded-lg hidden">
+                    <h3 class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-3">Text View</h3>
+                    <pre id="text-summary" class="font-mono text-sm leading-relaxed whitespace-pre-wrap text-gray-300"></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-[#1a1a1a] p-6 mt-10 border border-gray-800 rounded-t-lg shadow-2xl">
+            <h2 class="text-xs uppercase tracking-widest text-gray-500 font-bold mb-4">Unranked Items</h2>
+            <div id="item-pool" class="flex flex-wrap gap-3 min-h-[160px] p-2 bg-[#141414] rounded shadow-inner"></div>
+        </div>
+
+        <div class="bg-[#222] p-5 border-x border-b border-gray-800 rounded-b-lg flex flex-wrap items-end gap-10">
+            <div class="flex flex-col gap-2">
+                <span class="text-[10px] uppercase text-gray-400 font-bold tracking-widest">Create Text Item</span>
+                <div class="flex gap-2">
+                    <input type="text" id="item-name-input" placeholder="Enter text..." class="bg-black px-3 py-2 rounded text-sm outline-none border border-gray-700 w-48 focus:border-blue-500 transition">
+                    <button onclick="addNewRankableItem()" class="bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded text-xs font-bold transition flex items-center gap-2">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Add Text
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2 border-l border-gray-700 pl-8">
+                <span class="text-[10px] uppercase text-gray-400 font-bold tracking-widest">Upload Images</span>
+                <div class="flex gap-3 items-center">
+                    <input type="file" id="item-image-input" accept="image/*" multiple class="hidden" onchange="handleBulkImageUpload(event)">
+                    <button onclick="document.getElementById('item-image-input').click()" class="bg-blue-600 hover:bg-blue-500 px-5 py-2 rounded text-xs font-bold transition flex items-center gap-2 shadow-lg">
+                        <i data-lucide="upload-cloud" class="w-4 h-4"></i> Choose Files
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const COLORS = ["#ff7f7f", "#ffbf7f", "#ffff7f", "#bfff7f", "#7fff7f", "#7fffbf", "#7fffff", "#7fbfff", "#7f7fff", "#bf7fff", "#ff7fff", "#ff7fbf", "#333333", "#555555", "#888888", "#aaaaaa"];
+        let selectedCreateColor = COLORS[0];
+        let targetItem = null;
+
+        // --- RESTORED: Context Menu Logic ---
+        window.addEventListener('contextmenu', (e) => {
+            const item = e.target.closest('.item');
+            if (!item) return;
+
+            e.preventDefault();
+            targetItem = item;
+            
+            const menu = document.getElementById('custom-context-menu');
+            menu.style.display = 'block';
+            menu.style.left = `${e.clientX}px`;
+            menu.style.top = `${e.clientY}px`;
+        });
+
+        window.addEventListener('click', () => {
+            document.getElementById('custom-context-menu').style.display = 'none';
+        });
+
+        document.getElementById('delete-item-btn').onclick = () => {
+            if (targetItem) {
+                targetItem.remove();
+                targetItem = null;
+                onRankChange(); // Update text view and cache
+            }
+        };
+
+        // --- Persistence Logic ---
+        function saveToStorage() {
+            const data = { tiers: [], unranked: [] };
+            document.querySelectorAll('.tier-wrapper').forEach(tier => {
+                data.tiers.push({
+                    label: tier.querySelector('.label-text').innerText,
+                    color: tier.querySelector('.tier-handle').style.backgroundColor,
+                    items: Array.from(tier.querySelector('.tier-row').children).map(item => item.outerHTML)
+                });
+            });
+            data.unranked = Array.from(document.getElementById('item-pool').children).map(item => item.outerHTML);
+            localStorage.setItem('tierLab_persistent_cache', JSON.stringify(data));
+        }
+
+        function loadFromStorage() {
+            const rawData = localStorage.getItem('tierLab_persistent_cache');
+            if (!rawData) return false;
+            const data = JSON.parse(rawData);
+            const masterList = document.getElementById('master-tier-list');
+            const itemPool = document.getElementById('item-pool');
+            masterList.innerHTML = ""; itemPool.innerHTML = "";
+            data.tiers.forEach(tierData => {
+                const tierEl = createTierElement(tierData.label, tierData.color);
+                const row = tierEl.querySelector('.tier-row');
+                tierData.items.forEach(html => row.insertAdjacentHTML('beforeend', html));
+                masterList.appendChild(tierEl);
+                new Sortable(row, { group: 'items', animation: 150, ghostClass: 'ghost-class', onEnd: onRankChange });
+            });
+            data.unranked.forEach(html => itemPool.insertAdjacentHTML('beforeend', html));
+            lucide.createIcons();
+            return true;
+        }
+
+        function resetBoard() {
+            if(confirm("Clear all rankings and reset to default? This cannot be undone.")) {
+                localStorage.removeItem('tierLab_persistent_cache');
+                location.reload();
+            }
+        }
+
+        // --- Core Application Logic ---
+        function editLabel(span) {
+            const currentText = span.innerText;
+            const input = document.createElement('input');
+            input.type = "text"; input.value = currentText;
+            input.className = "tier-label-input";
+            span.replaceWith(input);
+            input.focus(); input.select();
+            const save = () => {
+                const newSpan = document.createElement('span');
+                newSpan.className = "label-text select-none text-center px-2";
+                newSpan.ondblclick = function() { editLabel(this); };
+                newSpan.innerText = input.value || currentText;
+                input.replaceWith(newSpan);
+                onRankChange();
+            };
+            input.onblur = save;
+            input.onkeydown = (e) => { if(e.key === 'Enter') save(); };
+        }
+
+        function editItemText(el) {
+            const labelEl = el.querySelector('.item-label') || el;
+            const currentText = labelEl.innerText;
+            const input = document.createElement('input');
+            input.type = "text"; input.value = currentText;
+            input.className = "edit-input font-bold";
+            labelEl.innerText = ''; labelEl.appendChild(input);
+            input.focus(); input.select();
+            const save = () => {
+                labelEl.innerText = input.value || currentText;
+                onRankChange();
+            };
+            input.onblur = save;
+            input.onkeydown = (e) => { if(e.key === 'Enter') save(); };
+        }
+
+        async function exportTierList() {
+            const container = document.getElementById('capture-container');
+            const noExport = document.querySelectorAll('.no-export, .w-12');
+            noExport.forEach(el => el.style.opacity = '0');
+            try {
+                const canvas = await html2canvas(container, { backgroundColor: '#0f0f0f', scale: 2, useCORS: true });
+                const link = document.createElement('a');
+                link.download = `tier-list-${Date.now()}.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+            } catch (err) { console.error("Export failed", err); } 
+            finally { noExport.forEach(el => el.style.opacity = '1'); }
+        }
+
+        function createTierElement(label, hexColor) {
+            const tierId = 'tier-' + Math.random().toString(36).substr(2, 9);
+            const div = document.createElement('div');
+            div.className = "tier-wrapper flex border border-gray-800 bg-[#1a1a1a] rounded overflow-visible shadow-lg";
+            let paletteHtml = `<div class="grid grid-cols-4 gap-2 mb-4">`;
+            COLORS.forEach(color => { paletteHtml += `<div class="color-swatch" style="background-color: ${color}" onclick="updateTierColor(this, '${color}')"></div>`; });
+            paletteHtml += `</div>`;
+            div.innerHTML = `<div class="tier-handle w-24 sm:w-32 flex items-center justify-center text-black font-black text-2xl cursor-move flex-shrink-0" style="background-color: ${hexColor}"><span class="label-text select-none text-center px-2" ondblclick="editLabel(this)">${label}</span></div><div class="tier-row flex-1 flex flex-wrap p-2 gap-2 min-h-[90px]"></div><div class="w-12 flex flex-col items-center py-2 bg-[#111] border-l border-gray-800 relative no-export"><button onclick="toggleSettings('${tierId}')" class="text-gray-500 hover:text-white p-1"><i data-lucide="settings" class="w-5 h-5"></i></button><div id="${tierId}" class="settings-menu absolute right-full top-0 bg-[#222] border border-gray-700 rounded shadow-2xl z-50 mr-4 p-4"><label class="text-[10px] text-gray-400 uppercase font-bold block mb-3">Tier Color</label>${paletteHtml}<div class="space-y-2 border-t border-gray-700 pt-3"><button onclick="clearTier(this)" class="w-full text-left px-3 py-2 text-xs hover:bg-gray-700 rounded transition flex items-center gap-2"><i data-lucide="refresh-cw" class="w-3 h-3"></i> Clear Items</button><button onclick="deleteTier(this)" class="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-red-900/30 rounded transition flex items-center gap-2"><i data-lucide="trash-2" class="w-3 h-3"></i> Delete Tier</button></div></div></div>`;
+            return div;
+        }
+
+        function handleBulkImageUpload(event) {
+            Array.from(event.target.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => { createItemNode(e.target.result, 'image', file.name.split('.')[0]); onRankChange(); };
+                reader.readAsDataURL(file);
+            });
+            event.target.value = '';
+        }
+
+        function createItemNode(content, type = 'text', label = 'New Item') {
+            const item = document.createElement('div');
+            item.className = "item bg-zinc-800 w-24 h-24 flex items-center justify-center text-[11px] text-center cursor-grab rounded border border-gray-700 hover:border-blue-500 transition shadow-lg overflow-hidden relative";
+            item.setAttribute('ondblclick', 'editItemText(this)');
+            if (type === 'image') { item.innerHTML = `<img src="${content}"><div class="item-label">${label}</div>`; }
+            else { item.innerText = content; }
+            document.getElementById('item-pool').appendChild(item);
+        }
+
+        function addCustomTier() {
+            const name = document.getElementById('new-tier-name');
+            const tier = createTierElement(name.value || "New", selectedCreateColor);
+            document.getElementById('master-tier-list').appendChild(tier);
+            new Sortable(tier.querySelector('.tier-row'), { group: 'items', animation: 150, ghostClass: 'ghost-class', onEnd: onRankChange });
+            lucide.createIcons(); name.value = ""; onRankChange();
+        }
+
+        function addNewRankableItem() {
+            const input = document.getElementById('item-name-input');
+            if(!input.value) return;
+            createItemNode(input.value, 'text');
+            input.value = ""; onRankChange();
+        }
+
+        function onRankChange() { 
+            if (!document.getElementById('text-output-panel').classList.contains('hidden')) generateTextSummary();
+            saveToStorage(); 
+        }
+
+        function generateTextSummary() {
+            let output = "";
+            document.querySelectorAll('.tier-wrapper').forEach(tier => {
+                const label = tier.querySelector('.label-text').innerText;
+                const items = Array.from(tier.querySelectorAll('.item')).map(item => {
+                    const imgLabel = item.querySelector('.item-label');
+                    return imgLabel ? imgLabel.innerText : item.innerText;
+                });
+                output += `${label}: ${items.join('; ')}\n`;
+            });
+            document.getElementById('text-summary').innerText = output || "No items ranked yet.";
+        }
+
+        function toggleTextView() {
+            const panel = document.getElementById('text-output-panel');
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden')) generateTextSummary();
+        }
+
+        function updateTierColor(sw, col) { sw.closest('.tier-wrapper').querySelector('.tier-handle').style.backgroundColor = col; onRankChange(); }
+        function toggleSettings(id) { document.querySelectorAll('.settings-menu').forEach(m => m.id !== id && m.classList.remove('active')); document.getElementById(id).classList.toggle('active'); }
+        function clearTier(btn) { const row = btn.closest('.tier-wrapper').querySelector('.tier-row'); while (row.firstChild) document.getElementById('item-pool').appendChild(row.firstChild); onRankChange(); }
+        function deleteTier(btn) { if(confirm("Delete tier?")) { clearTier(btn); btn.closest('.tier-wrapper').remove(); onRankChange(); } }
+
+        window.onload = () => {
+            const cp = document.getElementById('creation-color-grid');
+            COLORS.forEach(color => {
+                const s = document.createElement('div');
+                s.className = "color-swatch"; s.style.backgroundColor = color;
+                s.onclick = () => { selectedCreateColor = color; document.querySelectorAll('#creation-color-grid .color-swatch').forEach(x => x.classList.remove('selected')); s.classList.add('selected'); };
+                cp.appendChild(s);
+            });
+            cp.firstChild.classList.add('selected');
+
+            const loaded = loadFromStorage();
+            if (!loaded) {
+                ['S','A','B','C','D'].forEach((n, i) => {
+                    const t = createTierElement(n, COLORS[i]);
+                    document.getElementById('master-tier-list').appendChild(t);
+                    new Sortable(t.querySelector('.tier-row'), { group: 'items', animation: 150, ghostClass: 'ghost-class', onEnd: onRankChange });
+                });
+            }
+
+            new Sortable(document.getElementById('master-tier-list'), { handle: '.tier-handle', animation: 200, ghostClass: 'tier-ghost', onEnd: saveToStorage });
+            new Sortable(document.getElementById('item-pool'), { group: 'items', animation: 150, ghostClass: 'ghost-class', onEnd: onRankChange });
+            lucide.createIcons();
+        };
+
+        window.onclick = (e) => { if (!e.target.closest('.settings-menu') && !e.target.closest('button')) document.querySelectorAll('.settings-menu').forEach(m => m.classList.remove('active')); };
+    </script>
+</body>
+</html>
