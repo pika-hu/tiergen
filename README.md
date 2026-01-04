@@ -20,16 +20,26 @@ TierGen is a modern evolution of online tier list makers that aims to be frictio
 - Export tier list as image
 - Generate alternative text format for clarity
 
+### Additional Tier Making Functionality
+
+- Name tier list through title
+- Image import through drag and drop to rankable item area
+- Search bar to easily find specific labeled items to rank or identify when dealing with many items
+
+### Easy Addition of New Items through Integrated Search
+
+- Add search box where user can query what they are looking for
+- Add generic search as the option to scrape the internet for pictures
+  - Current solution: Duckduckgo search integration through proxy
+
 ## Possible Future Features
 
 ### Additional Tier Making Functionality
 
 Features that don't qualify as baseline functionality but are still enhancement that can be made to the tier making experience.
 
-- Name tier list through title
 - **(shelved)** Select multiple items through rectangular drag and ctrl-click
   - Originally had this implementation but wasn't super happy with it. May revisit at a later time.
-- Search bar to easily find specific labeled items to rank or identify when dealing with many items
 - Add Help button to bring up instructions, tips, and other informationals
 - Multi-platform optimization (largely mobile)
 
@@ -37,14 +47,15 @@ Features that don't qualify as baseline functionality but are still enhancement 
 
 One of the biggest friction points to making tier lists is creating all the rankable items. An integrated search engine would allow users to quickly select and title images to make rankable items.
 
-- Add search box where user can query what they are looking for
 - Integrate to different APIs to fetch images corresponding to user input
   - Music API for songs, artists, and albums - Spotify not accepting new app integrations right now, will look into alternatives like iTunes or last.fm
   - Game API for video games, Topsters uses IGDB
   - Movie API for movies, TV shows, and actors. Topsters uses TMDB, maybe look into "people" function
 - Add generic search as the option to scrape the internet for pictures
-  - Solution 1: Involves gemini with google search integration. It seems actually cheaper than direct google search API. Likely involves some app integration and tighter quota before paid service, but would be more fluid.
-  - Solution 2: Duckduckgo search integration through proxy
+  - **(shelved)** Solution 1: Involves gemini with google search integration. It seems actually cheaper than direct google search API. Likely involves some app integration and tighter quota before paid service, but would be more fluid.
+    - Still too expensive, the quota for google's free grounded search API is very low
+  - ~~Solution 2: Duckduckgo search integration through proxy~~
+    - Implemented via CORS proxy and passing a VQD token to generate an oJSON request: https://necromuralist.github.io/Neurotic-Networking/posts/duckduckgo-image-search/index.html
 - Use Gemini/other genAI as natural language processor middleware allowing users to write more free-form queries while the AI will translate it into a searchable input
 
 ### Built-in Web-based Music Player
