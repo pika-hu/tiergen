@@ -25,12 +25,22 @@ TierGen is a modern evolution of online tier list makers that aims to be frictio
 - Name tier list through title
 - Image import through drag and drop to rankable item area
 - Search bar to easily find specific labeled items to rank or identify when dealing with many items
+- Help button to bring up instructions, tips, and other informationals
 
 ### Easy Addition of New Items through Integrated Search
 
 - Add search box where user can query what they are looking for
 - Add generic search as the option to scrape the internet for pictures
   - Current solution: Duckduckgo search integration through proxy
+- Use Gemini/other genAI as natural language processor middleware allowing users to write more free-form queries while the AI will translate it into a searchable input
+  - Current solution: Gemini API to gemma-3-27b model
+
+## Next Steps
+
+Smart search is now integrated into the site! But it still needs a little refinement to produce consistently acceptable items to rank. Currently investigating two ways to go about this:
+
+- Integrate specific APIs and have the AI model choose the API to leverage: This is an end-goal that I will eventually have to work towards anyway because the current DDG search implementation is... quite shoddy. This method would get consistent images across distinct searches as well. This method does get costly in terms of sheer volume of potential APIs and maintenance though.
+- Prompt tuning: Reading through some prompt engineering article and classes to see how I can better tune the results. Current prompt is well below the token threshold so there is a lot of room to work with.
 
 ## Possible Future Features
 
@@ -40,7 +50,6 @@ Features that don't qualify as baseline functionality but are still enhancement 
 
 - **(shelved)** Select multiple items through rectangular drag and ctrl-click
   - Originally had this implementation but wasn't super happy with it. May revisit at a later time.
-- Add Help button to bring up instructions, tips, and other informationals
 - Multi-platform optimization (largely mobile)
 
 ### Easy Addition of New Items through Integrated Search
@@ -56,7 +65,8 @@ One of the biggest friction points to making tier lists is creating all the rank
     - Still too expensive, the quota for google's free grounded search API is very low
   - ~~Solution 2: Duckduckgo search integration through proxy~~
     - Implemented via CORS proxy and passing a VQD token to generate an oJSON request: https://necromuralist.github.io/Neurotic-Networking/posts/duckduckgo-image-search/index.html
-- Use Gemini/other genAI as natural language processor middleware allowing users to write more free-form queries while the AI will translate it into a searchable input
+- ~~Use Gemini/other genAI as natural language processor middleware allowing users to write more free-form queries while the AI will translate it into a searchable input~~
+  - Implemented via gemma-3-27b model through gemini API. Does require user to request a private API key but it is very easy to do. The gemma 3 model has a much more lenient rate limit than gemini 2.5 models, but may need some more prompt engineering to better tune search results.
 
 ### Built-in Web-based Music Player
 
